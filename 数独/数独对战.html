@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Abby的数独乐园</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fff7cf'/%3E%3Crect x='8' y='8' width='48' height='48' rx='8' fill='%23ffffff' stroke='%2326324d' stroke-width='4'/%3E%3Cpath d='M32 8v48M8 32h48' stroke='%2326324d' stroke-width='4'/%3E%3Ctext x='19' y='28' font-size='14' font-family='Arial' font-weight='700' fill='%234aa8ff'%3E1%3C/text%3E%3Ctext x='39' y='28' font-size='14' font-family='Arial' font-weight='700' fill='%23ff89bb'%3E2%3C/text%3E%3Ctext x='19' y='48' font-size='14' font-family='Arial' font-weight='700' fill='%2358cc75'%3E3%3C/text%3E%3Ctext x='39' y='48' font-size='14' font-family='Arial' font-weight='700' fill='%23ffb23f'%3E4%3C/text%3E%3C/svg%3E">
+    <style>
+        :root {
+            --ink: #26324d;
+            --muted: #5f6f89;
+            --paper: #fffaf0;
+            --panel: #ffffff;
+            --line: #26324d;
+            --blue: #4aa8ff;
+            --blue-soft: #e8f5ff;
+            --orange: #ffb23f;
+            --orange-soft: #fff1d6;
+            --green: #58cc75;
+            --green-soft: #e8ffe9;
+            --red: #ff6b6b;
+            --red-soft: #ffe7e7;
+            --pink: #ff89bb;
+            --purple: #8d7dff;
+            --yellow: #ffe66d;
+            --shadow: 0 8px 0 rgba(38, 50, 77, 0.16);
+            --radius: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "Arial Rounded MT Bold", "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+            background:
+                radial-gradient(circle at 10% 16%, rgba(255, 230, 109, 0.72) 0 58px, transparent 60px),
+                radial-gradient(circle at 86% 12%, rgba(255, 137, 187, 0.5) 0 54px, transparent 56px),
+                radial-gradient(circle at 92% 82%, rgba(74, 168, 255, 0.45) 0 86px, transparent 88px),
+                linear-gradient(135deg, #dff5ff 0%, #fff7cf 48%, #ffe4f0 100%);
+            padding: 22px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.28;
+            background-image:
+                radial-gradient(circle, #26324d 2px, transparent 2px),
+                radial-gradient(circle, #26324d 1.5px, transparent 1.5px);
+            background-position: 0 0, 28px 24px;
+            background-size: 72px 72px;
+        }
+
+        button,
+        select {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px) rotate(-0.4deg);
+        }
+
+        button:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+            transform: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .game-container {
+            width: min(1480px, 100%);
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            min-height: calc(100vh - 44px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .setup-panel {
+            min-height: auto;
+            display: grid;
+            align-items: stretch;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 30px;
+            padding: 18px 0;
+            margin: auto 0;
+        }
+
+        .hero-board,
+        .setup-card,
+        .player-area,
+        .teacher-bar,
+        .top-action-bar {
+            background: rgba(255, 253, 246, 0.96);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .hero-board {
+            display: flex;
+            flex-direction: column;
+            padding: clamp(28px, 4vw, 48px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-board::after {
+            content: "✦";
+            position: absolute;
+            right: -28px;
+            bottom: -36px;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: rgba(38, 50, 77, 0.16);
+            background: rgba(255, 178, 63, 0.28);
+            font-size: 5rem;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            color: #16456e;
+            background: #fff;
+            border: 3px solid var(--ink);
+            font-size: 0.98rem;
+            font-weight: 800;
+            margin-bottom: 18px;
+            box-shadow: 0 5px 0 rgba(38, 50, 77, 0.14);
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 5.5rem);
+            line-height: 1;
+            letter-spacing: 0;
+            margin-bottom: 18px;
+            text-shadow: 3px 4px 0 #ffe66d;
+        }
+
+        .hero-copy {
+            max-width: 680px;
+            color: var(--muted);
+            font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+            line-height: 1.7;
+            font-weight: 650;
+        }
+
+        .rule-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .rule-step {
+            min-height: 110px;
+            padding: 18px;
+            border-radius: 22px;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            box-shadow: 0 5px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .rule-step strong {
+            display: block;
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+        }
+
+        .rule-step span {
+            color: var(--muted);
+            font-weight: 650;
+            line-height: 1.5;
+        }
+
+        .setup-card {
+            display: flex;
+            flex-direction: column;
+            padding: 26px;
+        }
+
+        .setup-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .setup-note {
+            color: var(--muted);
+            font-weight: 650;
+            line-height: 1.55;
+            margin-bottom: 22px;
+        }
+
+        .quick-defaults {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .setting-card {
+            min-height: 138px;
+            padding: 16px;
+            border-radius: 20px;
+            background: var(--orange-soft);
+            border: 3px solid var(--ink);
+            box-shadow: 0 5px 0 rgba(38, 50, 77, 0.12);
+            display: grid;
+            gap: 12px;
+            align-content: start;
+        }
+
+        .setting-card:nth-child(2) {
+            background: var(--blue-soft);
+        }
+
+        .setting-card:nth-child(3) {
+            background: var(--green-soft);
+        }
+
+        .setting-card:nth-child(4) {
+            background: #fff9d7;
+        }
+
+        .setting-top {
+            display: grid;
+            gap: 4px;
+        }
+
+        .setting-label {
+            display: block;
+            color: #465573;
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
+        .setting-value {
+            font-size: 1.18rem;
+            line-height: 1.2;
+        }
+
+        .toggle-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+            gap: 8px;
+        }
+
+        .toggle-btn {
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 3px solid var(--ink);
+            background: rgba(255, 255, 255, 0.86);
+            color: #24324a;
+            font-size: 0.92rem;
+            font-weight: 900;
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .toggle-btn.is-active {
+            color: #172033;
+            background: #ffffff;
+            box-shadow: 0 4px 0 rgba(255, 159, 28, 0.35);
+            transform: translateY(-1px);
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 3px solid var(--ink);
+            border-radius: 16px;
+            color: var(--ink);
+            background: #fff;
+            font-weight: 800;
+            outline: none;
+        }
+
+        select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 4px rgba(47, 128, 237, 0.12);
+        }
+
+        .start-btn,
+        .modal-card button.primary {
+            width: 100%;
+            min-height: 64px;
+            border-radius: 20px;
+            background: var(--orange);
+            color: #2c2108;
+            font-size: 1.32rem;
+            font-weight: 950;
+            border: 3px solid var(--ink);
+            box-shadow: 0 7px 0 #d97800, 0 11px 0 rgba(38, 50, 77, 0.14);
+        }
+
+        .start-btn:hover,
+        .modal-card button.primary:hover {
+            background: #ffb23f;
+        }
+
+        .battle-screen {
+            display: grid;
+            gap: 16px;
+        }
+
+        .top-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .top-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 950;
+        }
+
+        .top-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .music-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 44px;
+            padding: 0 12px;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.16);
+            font-weight: 900;
+        }
+
+        .music-toggle {
+            min-width: 76px;
+            min-height: 32px;
+            padding: 0 10px;
+            border-radius: 12px;
+            color: #24324a;
+            background: var(--green-soft);
+            border: 2px solid var(--ink);
+            font-size: 0.92rem;
+            font-weight: 900;
+            box-shadow: 0 3px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .music-toggle.is-muted {
+            background: #eef4ff;
+            color: var(--muted);
+        }
+
+        .music-volume {
+            width: 112px;
+            accent-color: var(--green);
+            cursor: pointer;
+        }
+
+        .top-btn,
+        .small-btn {
+            min-height: 44px;
+            padding: 0 16px;
+            border-radius: 18px;
+            color: #24324a;
+            background: #fff;
+            border: 3px solid var(--ink);
+            font-weight: 900;
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.16);
+        }
+
+        .top-btn.warn {
+            background: #fff1e6;
+        }
+
+        .teacher-bar {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+        }
+
+        .teacher-steps {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .teacher-step {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 18px;
+            background: #fff;
+            border: 3px solid var(--ink);
+            font-weight: 900;
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .teacher-step b {
+            display: inline-grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--purple);
+            color: white;
+            border: 2px solid var(--ink);
+        }
+
+        .teacher-tip {
+            color: var(--muted);
+            font-weight: 750;
+            line-height: 1.45;
+        }
+
+        .battle-layout {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .battle-layout.solo-layout {
+            grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.72fr);
+            align-items: start;
+        }
+
+        .player-area {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            border-top-width: 12px;
+        }
+
+        .player-area.player-1 {
+            border-top-color: #78c7ff;
+            background: linear-gradient(180deg, #ffffff 0%, #eff9ff 100%);
+        }
+
+        .player-area.player-2 {
+            border-top-color: #ffbc58;
+            background: linear-gradient(180deg, #ffffff 0%, #fff5df 100%);
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .player-name {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(1.35rem, 2vw, 1.9rem);
+            font-weight: 950;
+        }
+
+        .info-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 36px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            font-weight: 900;
+            white-space: nowrap;
+            box-shadow: 0 3px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .mistake-count {
+            color: #b23a48;
+        }
+
+        .ai-count {
+            color: #5b45c9;
+            background: #f1efff;
+        }
+
+        .timer {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-badge {
+            color: #1f7b45;
+            background: var(--green-soft);
+        }
+
+        .player-tools {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .player-content {
+            display: grid;
+            gap: 12px;
+        }
+
+        .play-column,
+        .support-column {
+            display: grid;
+            gap: 12px;
+            align-content: start;
+        }
+
+        .solo-side-panel {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            align-content: start;
+            background: rgba(255, 253, 246, 0.96);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .solo-side-panel .hint-area {
+            min-height: 86px;
+        }
+
+        .solo-side-panel .history-list {
+            height: min(420px, calc(100vh - 360px));
+            max-height: min(420px, calc(100vh - 360px));
+        }
+
+        .small-btn {
+            width: 100%;
+            min-height: 48px;
+            background: #fff;
+        }
+
+        .small-btn.restart {
+            background: #fff8d8;
+        }
+
+        .board-wrapper {
+            display: grid;
+            place-items: center;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            width: min(100%, 420px);
+            gap: 2px;
+            padding: 2px;
+            border: 4px solid var(--ink);
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--ink);
+            box-shadow: 0 8px 0 rgba(38, 50, 77, 0.16);
+        }
+
+        .sudoku-grid.size-4 {
+            grid-template-columns: repeat(4, minmax(72px, 1fr));
+        }
+
+        .sudoku-grid.size-6 {
+            grid-template-columns: repeat(6, minmax(54px, 1fr));
+        }
+
+        .sudoku-grid.size-9 {
+            grid-template-columns: repeat(9, minmax(36px, 1fr));
+        }
+
+        .cell {
+            position: relative;
+            display: grid;
+            place-items: center;
+            aspect-ratio: 1 / 1;
+            border: 0;
+            color: #24324a;
+            background: #fffdf7;
+            font-family: "Arial Rounded MT Bold", "PingFang SC", "Microsoft YaHei", sans-serif;
+            font-size: clamp(1.7rem, 4.8vw, 3.35rem);
+            font-weight: 950;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: background 0.1s ease, box-shadow 0.1s ease, transform 0.08s ease;
+        }
+
+        /* 宫格加粗线：普通线2px（grid gap）+ 宫线额外4px（cell border）= 6px */
+        .sudoku-grid.size-4 .cell[data-col="1"],
+        .sudoku-grid.size-4 .cell[data-col="3"],
+        .sudoku-grid.size-6 .cell[data-col="2"],
+        .sudoku-grid.size-6 .cell[data-col="5"],
+        .sudoku-grid.size-9 .cell[data-col="2"],
+        .sudoku-grid.size-9 .cell[data-col="5"],
+        .sudoku-grid.size-9 .cell[data-col="8"] {
+            border-right: 4px solid var(--ink);
+        }
+
+        .sudoku-grid.size-4 .cell[data-row="1"],
+        .sudoku-grid.size-4 .cell[data-row="3"],
+        .sudoku-grid.size-6 .cell[data-row="1"],
+        .sudoku-grid.size-6 .cell[data-row="3"],
+        .sudoku-grid.size-6 .cell[data-row="5"],
+        .sudoku-grid.size-9 .cell[data-row="2"],
+        .sudoku-grid.size-9 .cell[data-row="5"],
+        .sudoku-grid.size-9 .cell[data-row="8"] {
+            border-bottom: 4px solid var(--ink);
+        }
+
+        .size-6 .cell {
+            font-size: clamp(1.25rem, 3.3vw, 2.35rem);
+        }
+
+        .size-9 .cell {
+            font-size: clamp(1rem, 2.2vw, 1.65rem);
+        }
+
+        .cell:hover {
+            z-index: 2;
+            box-shadow: inset 0 0 0 5px rgba(255, 230, 109, 0.7);
+        }
+
+        .cell.predefined {
+            color: #172033;
+            background: #dff2ff;
+        }
+
+        .cell.user-filled {
+            color: #159447 !important;
+        }
+
+        .cell.same-row,
+        .cell.same-col,
+        .cell.same-box {
+            background: #fff7d6;
+        }
+
+        .cell.same-box {
+            background: #eff9f0;
+        }
+
+        .cell.selected {
+            z-index: 3;
+            color: #172033;
+            background: var(--yellow) !important;
+            box-shadow: inset 0 0 0 6px #ff9f1c;
+        }
+
+        .cell.error-cell {
+            color: #a6202c !important;
+            background: var(--red-soft) !important;
+            box-shadow: inset 0 0 0 4px rgba(232, 93, 93, 0.55);
+        }
+
+        .cell.conflict-peer {
+            color: #a6202c;
+            background: #ffe0de !important;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .keypad-actions {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .key-btn {
+            min-height: 58px;
+            border-radius: 18px;
+            color: #172033;
+            background: #e8f5ff;
+            border: 3px solid var(--ink);
+            font-size: 1.7rem;
+            font-weight: 950;
+            box-shadow: 0 5px 0 #9cc8f5;
+        }
+
+        .key-btn.number-btn:nth-child(2n) {
+            background: #fff7df;
+            box-shadow: 0 4px 0 #efc46f;
+        }
+
+        .key-btn.action-btn {
+            font-size: 1.05rem;
+            background: #fff;
+            box-shadow: 0 4px 0 #c7d0df;
+        }
+
+        .key-btn.undo-btn {
+            background: #eff0ff;
+            box-shadow: 0 4px 0 #bbb7ff;
+        }
+
+        .key-btn.erase-btn {
+            background: #fff1d6;
+            box-shadow: 0 4px 0 #efc46f;
+        }
+
+        .key-btn.hint-btn {
+            background: #e8ffe9;
+            box-shadow: 0 4px 0 #9fe0ad;
+        }
+
+        .hint-area,
+        .history-panel {
+            border: 3px solid var(--ink);
+            border-radius: 20px;
+            background: #ffffff;
+            padding: 12px;
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.12);
+        }
+
+        .hint-area {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            color: #31425f;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.45;
+        }
+
+        .history-panel h3 {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 6px;
+            height: 132px;
+            max-height: 132px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 2px;
+            align-content: start;
+            scrollbar-gutter: stable;
+        }
+
+        .history-item {
+            padding: 8px 10px;
+            border-radius: 14px;
+            background: #fff8d8;
+            border: 2px solid var(--ink);
+            color: #31425f;
+            font-size: 0.95rem;
+            font-weight: 750;
+            min-height: 36px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-empty {
+            display: grid;
+            place-items: center;
+            min-height: 100%;
+            color: #8a97aa;
+            font-weight: 750;
+            border: 3px dashed #9aa8bd;
+            border-radius: 16px;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(28, 39, 59, 0.48);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-card {
+            width: min(560px, 100%);
+            padding: 28px 30px 24px;
+            border: 4px solid var(--ink);
+            border-radius: 28px;
+            background: var(--paper);
+            text-align: center;
+            box-shadow: 0 12px 0 rgba(38, 50, 77, 0.24), 0 28px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .modal-card h3 {
+            font-size: 2.1rem;
+            margin-bottom: 12px;
+        }
+
+        .modal-card p {
+            color: var(--muted);
+            font-size: 1.12rem;
+            font-weight: 750;
+            line-height: 1.65;
+            margin-bottom: 18px;
+        }
+
+        .modal-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            max-width: 340px;
+            margin: 0 auto;
+        }
+
+        .modal-card button.primary,
+        .modal-card button.secondary {
+            min-height: 46px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 950;
+        }
+
+        .modal-card button.primary {
+            box-shadow: 0 4px 0 #d97800;
+        }
+
+        .modal-card button.secondary {
+            background: #eef4ff;
+            border: 3px solid var(--ink);
+            color: #24324a;
+            box-shadow: 0 4px 0 rgba(38, 50, 77, 0.14);
+        }
+
+        .round-start-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 900;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(255, 250, 240, 0.56);
+            backdrop-filter: blur(2px);
+        }
+
+        .big-start-btn {
+            min-width: min(440px, 86vw);
+            min-height: 150px;
+            padding: 22px 42px;
+            border-radius: 36px;
+            border: 5px solid var(--ink);
+            color: #26324d;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.72), transparent 30%),
+                linear-gradient(135deg, #ffe66d 0%, #ffb23f 55%, #ff89bb 100%);
+            box-shadow: 0 12px 0 #d97800, 0 22px 0 rgba(38, 50, 77, 0.18);
+            font-size: clamp(2.2rem, 6vw, 4.4rem);
+            font-weight: 950;
+            letter-spacing: 0;
+        }
+
+        .ready-go-pop {
+            display: grid;
+            place-items: center;
+            min-width: min(480px, 86vw);
+            min-height: 180px;
+            border-radius: 40px;
+            border: 5px solid var(--ink);
+            color: white;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.35), transparent 28%),
+                linear-gradient(135deg, #8d7dff 0%, #4aa8ff 50%, #58cc75 100%);
+            box-shadow: 0 12px 0 rgba(38, 50, 77, 0.32);
+            font-size: clamp(3rem, 9vw, 6.5rem);
+            font-weight: 950;
+            text-shadow: 4px 5px 0 rgba(38, 50, 77, 0.28);
+            animation: readyGoPop 0.46s cubic-bezier(.2, 1.4, .35, 1) both;
+        }
+
+        .winner-name {
+            display: inline-block;
+            padding: 10px 26px;
+            margin: 10px auto 12px;
+            border: 5px solid var(--ink);
+            border-radius: 28px;
+            color: #165f33;
+            background: linear-gradient(135deg, #e8ffe9 0%, #ffe66d 100%);
+            box-shadow: 0 8px 0 rgba(38, 50, 77, 0.2);
+            font-size: clamp(2.3rem, 7vw, 4.5rem);
+            line-height: 1;
+            font-weight: 950;
+        }
+
+        .winner-label {
+            display: block;
+            color: #5f6f89;
+            font-size: 1.05rem;
+            font-weight: 900;
+            margin-top: 4px;
+        }
+
+        .result-lines {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        @keyframes readyGoPop {
+            0% {
+                opacity: 0;
+                transform: scale(0.35) rotate(-8deg);
+            }
+            70% {
+                opacity: 1;
+                transform: scale(1.08) rotate(2deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0);
+            }
+        }
+
+        @media (max-width: 1080px) {
+            body {
+                padding: 14px;
+            }
+
+            .setup-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-board,
+            .setup-card {
+                height: auto;
+            }
+
+            .battle-layout:not(.solo-layout) {
+                grid-template-columns: 1fr;
+            }
+
+            .sudoku-grid {
+                width: min(100%, 560px);
+            }
+        }
+
+        @media (max-width: 960px) {
+            .battle-layout.solo-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .hero-board,
+            .setup-card,
+            .player-area,
+            .teacher-bar,
+            .top-action-bar {
+                border-radius: 14px;
+            }
+
+            .rule-strip,
+            .quick-defaults,
+            .options-grid,
+            .teacher-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .top-action-bar,
+            .player-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .top-buttons {
+                justify-content: stretch;
+            }
+
+            .music-control {
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            .music-volume {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .top-btn {
+                flex: 1;
+            }
+
+            .teacher-steps {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .sudoku-grid.size-4 {
+                grid-template-columns: repeat(4, minmax(54px, 1fr));
+            }
+
+            .sudoku-grid.size-6 {
+                grid-template-columns: repeat(6, minmax(40px, 1fr));
+            }
+
+            .sudoku-grid.size-9 {
+                grid-template-columns: repeat(9, minmax(26px, 1fr));
+            }
+
+            .keypad {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .key-btn.action-btn {
+                grid-column: span 1;
+            }
+
+            .modal-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="game-container">
+    <section id="setupScreen" class="screen setup-panel">
+        <div class="hero-board">
+            <div class="eyebrow">二年级数学 · 四宫格数独</div>
+            <h1>Abby的数独乐园</h1>
+            <div class="rule-strip" aria-label="数独课堂三步法">
+                <div class="rule-step">
+                    <strong>1. 先看行</strong>
+                    <span>横排里，数字不能重复。</span>
+                </div>
+                <div class="rule-step">
+                    <strong>2. 再看列</strong>
+                    <span>竖排里，数字不能重复。</span>
+                </div>
+                <div class="rule-step">
+                    <strong>3. 最后看宫</strong>
+                    <span>宫格里，数字不能重复。</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-card">
+            <div class="setup-title">今天想怎么玩？</div>
+            <p class="setup-note">默认是适合二年级的双人一起练。下面四项都可以直接点一点，马上换成老师想带的课堂版本。</p>
+            <div class="quick-defaults">
+                <div class="setting-card" data-setting="modeSelect">
+                    <div class="setting-top">
+                        <span class="setting-label">课堂形式</span>
+                        <strong class="setting-value" data-summary-for="modeSelect">双人对战</strong>
+                    </div>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn" data-select-id="modeSelect" data-value="duel">双人对战</button>
+                        <button type="button" class="toggle-btn" data-select-id="modeSelect" data-value="solo">单人演示</button>
+                    </div>
+                    <select id="modeSelect" class="hidden">
+                        <option value="duel" selected>双人对战</option>
+                        <option value="solo">单人演示</option>
+                    </select>
+                </div>
+                <div class="setting-card" data-setting="boardSizeSelect">
+                    <div class="setting-top">
+                        <span class="setting-label">棋盘规格</span>
+                        <strong class="setting-value" data-summary-for="boardSizeSelect">4×4 小棋盘</strong>
+                    </div>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn" data-select-id="boardSizeSelect" data-value="4">4×4</button>
+                        <button type="button" class="toggle-btn" data-select-id="boardSizeSelect" data-value="6">6×6</button>
+                        <button type="button" class="toggle-btn" data-select-id="boardSizeSelect" data-value="9">9×9</button>
+                    </div>
+                    <select id="boardSizeSelect" class="hidden">
+                        <option value="4" selected>4×4 小棋盘</option>
+                        <option value="6">6×6 动动脑</option>
+                        <option value="9">9×9 大棋盘</option>
+                    </select>
+                </div>
+                <div class="setting-card" data-setting="difficultySelect">
+                    <div class="setting-top">
+                        <span class="setting-label">题目难度</span>
+                        <strong class="setting-value" data-summary-for="difficultySelect">轻松一点</strong>
+                    </div>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn" data-select-id="difficultySelect" data-value="easy">轻松一点</button>
+                        <button type="button" class="toggle-btn" data-select-id="difficultySelect" data-value="medium">动动脑</button>
+                        <button type="button" class="toggle-btn" data-select-id="difficultySelect" data-value="hard">试试看</button>
+                    </div>
+                    <select id="difficultySelect" class="hidden">
+                        <option value="easy" selected>轻松一点</option>
+                        <option value="medium">动动脑</option>
+                        <option value="hard">试试看</option>
+                    </select>
+                </div>
+                <div class="setting-card" data-setting="timeModeSelect">
+                    <div class="setting-top">
+                        <span class="setting-label">计时方式</span>
+                        <strong class="setting-value" data-summary-for="timeModeSelect">轻松计时</strong>
+                    </div>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn" data-select-id="timeModeSelect" data-value="timed">轻松计时</button>
+                        <button type="button" class="toggle-btn" data-select-id="timeModeSelect" data-value="untimed">不看时间</button>
+                    </div>
+                    <select id="timeModeSelect" class="hidden">
+                        <option value="timed" selected>轻松计时</option>
+                        <option value="untimed">不看时间</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="start-btn" id="startBattleBtn">开始课堂挑战</button>
+        </div>
+    </section>
+
+    <section id="battleScreen" class="screen battle-screen hidden">
+        <div class="top-action-bar">
+            <div class="top-title">Abby的数独乐园 · <span id="gameMeta">4×4 入门</span></div>
+            <div class="top-buttons">
+                <div class="music-control" aria-label="背景音乐音量">
+                    <button class="music-toggle" id="musicToggleBtn" type="button">音乐开</button>
+                    <input class="music-volume" id="musicVolume" type="range" min="0" max="100" value="35" aria-label="背景音乐音量">
+                </div>
+                <button class="top-btn" id="newPuzzleBtn">换一道题</button>
+                <button class="top-btn" id="backHomeBtn">回到首页</button>
+                <button class="top-btn warn" id="endMatchBtn">先停一下</button>
+            </div>
+        </div>
+
+        <div class="round-start-overlay hidden" id="roundStartOverlay">
+            <button class="big-start-btn" id="startTimerBtn">准备好了</button>
+        </div>
+
+        <div class="teacher-bar">
+            <div class="teacher-steps">
+                <div class="teacher-step"><b>1</b>看同行</div>
+                <div class="teacher-step"><b>2</b>看同列</div>
+                <div class="teacher-step"><b>3</b>看同宫格</div>
+            </div>
+            <div class="teacher-tip" id="teacherTip">点一个空格以后，相关的行、列和小宫格会一起亮起来，老师可以带着全班一起看。</div>
+        </div>
+
+        <div class="battle-layout" id="battleLayout"></div>
+    </section>
+    <audio id="backgroundMusic" src="https://bahe2.rth1.xyz/beijing.mp3" loop preload="auto"></audio>
+</main>
+
+<script>
+    const SIZE_LABELS = {
+        4: "4×4 小棋盘",
+        6: "6×6 动动脑",
+        9: "9×9 大棋盘"
+    };
+
+    const DIFFICULTY_RATIO = {
+        easy: { 4: 0.42, 6: 0.42, 9: 0.38 },
+        medium: { 4: 0.5, 6: 0.52, 9: 0.5 },
+        hard: { 4: 0.58, 6: 0.62, 9: 0.58 }
+    };
+
+    const DIFFICULTY_SOLUTION_LIMIT = {
+        easy: 1,
+        medium: 3,
+        hard: 6
+    };
+
+    function playVictorySound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = audioCtx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98];
+            notes.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = idx % 2 === 0 ? "triangle" : "sine";
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.001, now + idx * 0.11);
+                gain.gain.exponentialRampToValueAtTime(0.2, now + idx * 0.11 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.11 + 0.42);
+                osc.start(now + idx * 0.11);
+                osc.stop(now + idx * 0.11 + 0.42);
+            });
+            [523.25, 659.25, 783.99, 1046.5].forEach((freq) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "sine";
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0.001, now + 0.78);
+                gain.gain.exponentialRampToValueAtTime(0.12, now + 0.84);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.35);
+                osc.start(now + 0.78);
+                osc.stop(now + 1.35);
+            });
+        } catch (e) {
+            console.log("音效播放需要用户交互");
+        }
+    }
+
+    function playStartCueSound(stage) {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "triangle";
+            osc.frequency.value = stage === "start" ? 784 : 523.25;
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.exponentialRampToValueAtTime(0.22, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.36);
+        } catch (e) {
+            console.log("音效播放需要用户交互");
+        }
+    }
+
+    function getBoxSize(n) {
+        if (n === 4) return { rows: 2, cols: 2 };
+        if (n === 6) return { rows: 2, cols: 3 };
+        return { rows: 3, cols: 3 };
+    }
+
+    function isSameBox(rowA, colA, rowB, colB, n) {
+        const box = getBoxSize(n);
+        return Math.floor(rowA / box.rows) === Math.floor(rowB / box.rows)
+            && Math.floor(colA / box.cols) === Math.floor(colB / box.cols);
+    }
+
+    function isValidPlacement(grid, row, col, val, n) {
+        for (let c = 0; c < n; c++) if (grid[row][c] === val) return false;
+        for (let r = 0; r < n; r++) if (grid[r][col] === val) return false;
+        const box = getBoxSize(n);
+        const startRow = Math.floor(row / box.rows) * box.rows;
+        const startCol = Math.floor(col / box.cols) * box.cols;
+        for (let i = 0; i < box.rows; i++) {
+            for (let j = 0; j < box.cols; j++) {
+                if (grid[startRow + i][startCol + j] === val) return false;
+            }
+        }
+        return true;
+    }
+
+    function isValidSolutionValue(grid, row, col, val, n) {
+        for (let c = 0; c < n; c++) if (c !== col && grid[row][c] === val) return false;
+        for (let r = 0; r < n; r++) if (r !== row && grid[r][col] === val) return false;
+        const box = getBoxSize(n);
+        const startRow = Math.floor(row / box.rows) * box.rows;
+        const startCol = Math.floor(col / box.cols) * box.cols;
+        for (let i = 0; i < box.rows; i++) {
+            for (let j = 0; j < box.cols; j++) {
+                const checkRow = startRow + i;
+                const checkCol = startCol + j;
+                if ((checkRow !== row || checkCol !== col) && grid[checkRow][checkCol] === val) return false;
+            }
+        }
+        return true;
+    }
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function fillSudoku(grid, n) {
+        for (let row = 0; row < n; row++) {
+            for (let col = 0; col < n; col++) {
+                if (grid[row][col] === 0) {
+                    const numbers = shuffleArray([...Array(n).keys()].map(i => i + 1));
+                    for (const val of numbers) {
+                        if (isValidPlacement(grid, row, col, val, n)) {
+                            grid[row][col] = val;
+                            if (fillSudoku(grid, n)) return true;
+                            grid[row][col] = 0;
+                        }
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function generateCompleteSudoku(n) {
+        const grid = Array.from({ length: n }, () => Array(n).fill(0));
+        fillSudoku(grid, n);
+        return grid.map(row => [...row]);
+    }
+
+    function getSolutionCount(grid, n, limit = 2) {
+        let bestCell = null;
+        let bestCandidates = null;
+        for (let row = 0; row < n; row++) {
+            for (let col = 0; col < n; col++) {
+                if (grid[row][col] === 0) {
+                    const candidates = [];
+                    for (let val = 1; val <= n; val++) {
+                        if (isValidSolutionValue(grid, row, col, val, n)) candidates.push(val);
+                    }
+                    if (!candidates.length) return 0;
+                    if (!bestCandidates || candidates.length < bestCandidates.length) {
+                        bestCell = { row, col };
+                        bestCandidates = candidates;
+                        if (candidates.length === 1) break;
+                    }
+                }
+            }
+            if (bestCandidates && bestCandidates.length === 1) break;
+        }
+        if (!bestCell) return 1;
+
+        let count = 0;
+        for (const val of bestCandidates) {
+            grid[bestCell.row][bestCell.col] = val;
+            count += getSolutionCount(grid, n, limit - count);
+            grid[bestCell.row][bestCell.col] = 0;
+            if (count >= limit) return count;
+        }
+        return count;
+    }
+
+    function getRandomPuzzle(size, difficulty) {
+        const full = generateCompleteSudoku(size);
+        const puzzle = full.map(row => [...row]);
+        const ratio = (DIFFICULTY_RATIO[difficulty] || DIFFICULTY_RATIO.easy)[size] || 0.42;
+        const solutionLimit = DIFFICULTY_SOLUTION_LIMIT[difficulty] || DIFFICULTY_SOLUTION_LIMIT.easy;
+        const total = size * size;
+        const cells = shuffleArray([...Array(total).keys()].map(index => ({
+            row: Math.floor(index / size),
+            col: index % size
+        })));
+        let toRemove = Math.floor(total * ratio);
+        let solutionCount = 1;
+        for (const cell of cells) {
+            if (toRemove <= 0) break;
+            const oldValue = puzzle[cell.row][cell.col];
+            puzzle[cell.row][cell.col] = 0;
+            const candidateSolutionCount = getSolutionCount(puzzle, size, solutionLimit + 1);
+            const validSolutionCount = difficulty === "easy"
+                ? candidateSolutionCount === 1
+                : candidateSolutionCount >= 1 && candidateSolutionCount <= solutionLimit;
+            if (validSolutionCount) {
+                solutionCount = candidateSolutionCount;
+                toRemove--;
+            } else {
+                puzzle[cell.row][cell.col] = oldValue;
+            }
+        }
+        solutionCount = getSolutionCount(puzzle, size, solutionLimit + 1);
+        return { puzzle, solution: full, solutionCount };
+    }
+
+    function getConflictingCells(grid, row, col, val, n) {
+        if (val === 0) return [];
+        const conflicts = [];
+        for (let i = 0; i < n; i++) {
+            if (i !== col && grid[row][i] === val) conflicts.push({ row, col: i, type: "row" });
+            if (i !== row && grid[i][col] === val) conflicts.push({ row: i, col, type: "col" });
+        }
+        const box = getBoxSize(n);
+        const startRow = Math.floor(row / box.rows) * box.rows;
+        const startCol = Math.floor(col / box.cols) * box.cols;
+        for (let r = 0; r < box.rows; r++) {
+            for (let c = 0; c < box.cols; c++) {
+                const checkRow = startRow + r;
+                const checkCol = startCol + c;
+                if ((checkRow !== row || checkCol !== col) && grid[checkRow][checkCol] === val) {
+                    conflicts.push({ row: checkRow, col: checkCol, type: "box" });
+                }
+            }
+        }
+        return conflicts;
+    }
+
+    function getConflictMessage(conflicts, val) {
+        const types = new Set(conflicts.map(item => item.type));
+        if (types.has("row")) return `这一行里已经有 ${val} 啦，换一个数字试试。`;
+        if (types.has("col")) return `这一列里已经有 ${val} 啦，换一个数字试试。`;
+        return `这个小宫格里已经有 ${val} 啦，换一个数字试试。`;
+    }
+
+    function hasConflict(grid, row, col, val, n) {
+        return getConflictingCells(grid, row, col, val, n).length > 0;
+    }
+
+    function getCandidates(grid, row, col, n) {
+        if (grid[row][col] !== 0) return [];
+        const used = new Set();
+        for (let i = 0; i < n; i++) {
+            if (grid[row][i] !== 0) used.add(grid[row][i]);
+            if (grid[i][col] !== 0) used.add(grid[i][col]);
+        }
+        const box = getBoxSize(n);
+        const startRow = Math.floor(row / box.rows) * box.rows;
+        const startCol = Math.floor(col / box.cols) * box.cols;
+        for (let r = 0; r < box.rows; r++) {
+            for (let c = 0; c < box.cols; c++) {
+                const val = grid[startRow + r][startCol + c];
+                if (val !== 0) used.add(val);
+            }
+        }
+        const candidates = [];
+        for (let i = 1; i <= n; i++) if (!used.has(i)) candidates.push(i);
+        return candidates;
+    }
+
+    function formatTime(totalSeconds) {
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function bindPress(element, handler) {
+        let lastPointerKey = "";
+        let lastPointerTime = 0;
+
+        element.addEventListener("pointerdown", (event) => {
+            if (element.disabled) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const pointerKey = `${event.pointerId}-${event.type}`;
+            const now = performance.now();
+            if (pointerKey === lastPointerKey && now - lastPointerTime < 120) return;
+            lastPointerKey = pointerKey;
+            lastPointerTime = now;
+
+            if (element.setPointerCapture && event.isPrimary !== false) {
+                try {
+                    element.setPointerCapture(event.pointerId);
+                } catch (e) {
+                    // Some browsers do not allow capture on every element.
+                }
+            }
+            handler(event);
+        });
+    }
+
+    function refreshSetupControl(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const summary = document.querySelector(`[data-summary-for="${selectId}"]`);
+        if (summary && select.selectedIndex >= 0) {
+            summary.textContent = select.options[select.selectedIndex].textContent;
+        }
+        document.querySelectorAll(`.toggle-btn[data-select-id="${selectId}"]`).forEach((button) => {
+            const isActive = button.dataset.value === select.value;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+    }
+
+    function initSetupControls() {
+        const selectIds = ["modeSelect", "boardSizeSelect", "difficultySelect", "timeModeSelect"];
+        document.querySelectorAll(".toggle-btn[data-select-id]").forEach((button) => {
+            bindPress(button, () => {
+                const select = document.getElementById(button.dataset.selectId);
+                if (!select) return;
+                select.value = button.dataset.value;
+                refreshSetupControl(select.id);
+            });
+        });
+        selectIds.forEach((selectId) => {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.addEventListener("change", () => refreshSetupControl(selectId));
+            refreshSetupControl(selectId);
+        });
+    }
+
+    class SudokuPlayer {
+        constructor(pid, name, icon, size, puzzleData, useTimer, onWinCallback) {
+            this.pid = pid;
+            this.name = name;
+            this.icon = icon;
+            this.size = size;
+            this.originalPuzzle = puzzleData.puzzle.map(row => [...row]);
+            this.solution = puzzleData.solution.map(row => [...row]);
+            this.grid = this.originalPuzzle.map(row => [...row]);
+            this.fixedMask = this.originalPuzzle.map(row => row.map(v => v !== 0));
+            this.history = [];
+            this.mistakes = 0;
+            this.aiHints = 0;
+            this.completed = false;
+            this.timerSeconds = 0;
+            this.interval = null;
+            this.useTimer = useTimer;
+            this.onWin = onWinCallback;
+            this.selectedRow = -1;
+            this.selectedCol = -1;
+            this.lastChanged = null;
+            this.conflictCells = [];
+            this.elements = {};
+            this.containerDiv = null;
+            this.sidePanelDiv = null;
+            this.roundStarted = false;
+            this.isSoloDemo = currentGameMode === "solo";
+            this.createDOM();
+        }
+
+        createDOM() {
+            const layout = document.getElementById("battleLayout");
+            const areaDiv = document.createElement("div");
+            areaDiv.className = `player-area player-${this.pid}`;
+            areaDiv.setAttribute("data-pid", this.pid);
+            areaDiv.innerHTML = `
+                <div class="player-header">
+                    <span class="player-name">${this.icon} ${this.name}</span>
+                    <div class="info-stats">
+                        <span class="stat-chip mistake-count" id="mistakes_${this.pid}">小提醒 0</span>
+                        <span class="stat-chip ai-count" id="aiHints_${this.pid}">线索卡 0</span>
+                        ${this.useTimer ? `<span class="stat-chip timer" id="timer_${this.pid}">00:00</span>` : ""}
+                        <span class="stat-chip status-badge" id="status_${this.pid}">还没开始</span>
+                    </div>
+                </div>
+                <div class="player-tools">
+                    <button class="small-btn restart" id="restart_${this.pid}">重新试试</button>
+                </div>
+                <div class="player-content">
+                    <div class="play-column">
+                        <div class="board-wrapper"><div class="sudoku-grid size-${this.size}" id="grid_${this.pid}"></div></div>
+                        <div class="keypad" id="keypad_${this.pid}"></div>
+                    </div>
+                    ${this.isSoloDemo ? "" : `
+                    <div class="support-column">
+                        <div class="hint-area" id="hint_${this.pid}">点上方“准备好了”以后，我们就一起开始填。</div>
+                        <div class="history-panel">
+                            <h3>已操作</h3>
+                            <div class="history-list" id="history_${this.pid}"></div>
+                        </div>
+                    </div>
+                    `}
+                </div>
+            `;
+            layout.appendChild(areaDiv);
+            if (this.isSoloDemo) {
+                const sidePanelDiv = document.createElement("div");
+                sidePanelDiv.className = "solo-side-panel";
+                sidePanelDiv.innerHTML = `
+                    <div class="hint-area" id="hint_${this.pid}">点上方“准备好了”以后，我们就一起开始填。</div>
+                    <div class="history-panel">
+                        <h3>已操作</h3>
+                        <div class="history-list" id="history_${this.pid}"></div>
+                    </div>
+                `;
+                layout.appendChild(sidePanelDiv);
+                this.sidePanelDiv = sidePanelDiv;
+            }
+            this.containerDiv = areaDiv;
+            this.elements = {
+                gridContainer: document.getElementById(`grid_${this.pid}`),
+                keypadContainer: document.getElementById(`keypad_${this.pid}`),
+                hintDiv: document.getElementById(`hint_${this.pid}`),
+                historyList: document.getElementById(`history_${this.pid}`),
+                mistakesSpan: document.getElementById(`mistakes_${this.pid}`),
+                aiHintsSpan: document.getElementById(`aiHints_${this.pid}`),
+                timerSpan: this.useTimer ? document.getElementById(`timer_${this.pid}`) : null,
+                statusSpan: document.getElementById(`status_${this.pid}`),
+                restartBtn: document.getElementById(`restart_${this.pid}`)
+            };
+            bindPress(this.elements.restartBtn, () => this.restart());
+            this.renderGrid();
+            this.renderKeypad();
+            this.renderHistory();
+            this.updateUI();
+        }
+
+        renderGrid() {
+            const gridDiv = this.elements.gridContainer;
+            gridDiv.innerHTML = "";
+            gridDiv.className = `sudoku-grid size-${this.size}`;
+            const conflictKeySet = new Set(this.conflictCells.map(item => `${item.row}-${item.col}`));
+            for (let row = 0; row < this.size; row++) {
+                for (let col = 0; col < this.size; col++) {
+                    const val = this.grid[row][col];
+                    const isFixed = this.fixedMask[row][col];
+                    const cell = document.createElement("div");
+                    cell.className = "cell";
+                    cell.setAttribute("data-row", row);
+                    cell.setAttribute("data-col", col);
+                    if (isFixed) cell.classList.add("predefined");
+                    if (!isFixed && val !== 0) cell.classList.add("user-filled");
+                    if (this.selectedRow !== -1 && this.selectedCol !== -1) {
+                        if (row === this.selectedRow && col === this.selectedCol) cell.classList.add("selected");
+                        else if (row === this.selectedRow) cell.classList.add("same-row");
+                        else if (col === this.selectedCol) cell.classList.add("same-col");
+                        else if (isSameBox(row, col, this.selectedRow, this.selectedCol, this.size)) cell.classList.add("same-box");
+                    }
+                    if (!isFixed && val !== 0 && hasConflict(this.grid, row, col, val, this.size)) {
+                        cell.classList.add("error-cell");
+                    }
+                    if (conflictKeySet.has(`${row}-${col}`)) cell.classList.add("conflict-peer");
+                    cell.textContent = val === 0 ? "" : val;
+                    bindPress(cell, () => this.selectCell(row, col));
+                    gridDiv.appendChild(cell);
+                }
+            }
+        }
+
+        selectCell(row, col) {
+            if (this.completed) {
+                this.setHintText("这一题已经完成啦，可以点“换一道题”继续练习。");
+                return;
+            }
+            if (!this.roundStarted) {
+                this.setHintText("先点上方“准备好了”，我们再开始填数字。");
+                return;
+            }
+            this.selectedRow = row;
+            this.selectedCol = col;
+            this.conflictCells = [];
+            this.renderGrid();
+            if (this.fixedMask[row][col]) {
+                this.setHintText("这个数字是题目先给我们的，不能改，我们可以拿它来帮忙排除。");
+            } else {
+                this.setHintText(`现在看第 ${row + 1} 行第 ${col + 1} 列。先看亮起来的行，再看列和小宫格。`);
+            }
+        }
+
+        setNumber(num) {
+            if (this.completed) {
+                this.setHintText("这一题已经完成啦，不用再改了。");
+                return;
+            }
+            if (!this.roundStarted) {
+                this.setHintText("先点上方“准备好了”，我们再开始填数字。");
+                return;
+            }
+            if (this.selectedRow === -1 || this.selectedCol === -1) {
+                this.setHintText("先点一个空白格，再选想填的数字。");
+                return;
+            }
+            if (this.fixedMask[this.selectedRow][this.selectedCol]) {
+                this.setHintText("题目先给的数字不能改，请换一个空白格试试。");
+                return;
+            }
+
+            const before = this.grid[this.selectedRow][this.selectedCol];
+            const after = num === "del" ? 0 : Number(num);
+            if (before === after) {
+                this.setHintText(after === 0 ? "这个格子本来就是空的。": `这个格子里已经是 ${after} 了。`);
+                return;
+            }
+
+            this.grid[this.selectedRow][this.selectedCol] = after;
+            this.lastChanged = { row: this.selectedRow, col: this.selectedCol };
+            this.conflictCells = [];
+
+            const label = `第${this.selectedRow + 1}行第${this.selectedCol + 1}列`;
+            const actionText = after === 0 ? `${label} 擦除` : `${label} 填 ${after}`;
+            const snapshot = {
+                row: this.selectedRow,
+                col: this.selectedCol,
+                before,
+                after,
+                actionText,
+                mistakeBefore: this.mistakes
+            };
+            this.history.push(snapshot);
+
+            if (after !== 0) {
+                const conflicts = getConflictingCells(this.grid, this.selectedRow, this.selectedCol, after, this.size);
+                if (conflicts.length) {
+                    this.mistakes++;
+                    this.conflictCells = conflicts;
+                    this.setHintText(`${getConflictMessage(conflicts, after)}先回退一步，或者擦掉再想一想。`);
+                } else {
+                    this.setHintText(`很好，${label} 可以填 ${after}。继续用“行、列、宫”检查下一格。`);
+                }
+            } else {
+                this.setHintText(`${label} 已经擦掉了，我们重新想一想。`);
+            }
+
+            this.renderGrid();
+            this.renderHistory();
+            this.updateUI();
+
+            if (this.checkVictory() && !this.completed) {
+                this.completed = true;
+                this.stopTimer();
+                this.updateUI();
+                this.setHintText("完成啦！每一行、每一列、每个小宫格都没有重复，真棒。");
+                if (this.onWin) this.onWin(this.pid, this.getResultSummary());
+            }
+        }
+
+        undo() {
+            if (this.completed) {
+                this.setHintText("这一题已经完成啦，不需要再回退了。");
+                return;
+            }
+            if (!this.roundStarted) {
+                this.setHintText("先点上方“准备好了”，我们再开始填数字。");
+                return;
+            }
+            const last = this.history.pop();
+            if (!last) {
+                this.setHintText("现在还没有可以回退的一步哦。");
+                return;
+            }
+            this.grid[last.row][last.col] = last.before;
+            this.mistakes = last.mistakeBefore;
+            this.selectedRow = last.row;
+            this.selectedCol = last.col;
+            this.lastChanged = last.before === 0 ? null : { row: last.row, col: last.col };
+            this.conflictCells = [];
+            this.setHintText(`已经回退一步：${last.actionText}。我们再想一想。`);
+            this.renderGrid();
+            this.renderHistory();
+            this.updateUI();
+        }
+
+        restart() {
+            if (this.completed) {
+                this.setHintText("这一题已经完成啦，可以点上方“换一道题”。");
+                return;
+            }
+            this.grid = this.originalPuzzle.map(row => [...row]);
+            this.history = [];
+            this.mistakes = 0;
+            this.selectedRow = -1;
+            this.selectedCol = -1;
+            this.lastChanged = null;
+            this.conflictCells = [];
+            this.setHintText("刚才填写的内容已经清空啦，计时会继续保留。");
+            this.renderGrid();
+            this.renderHistory();
+            this.updateUI();
+        }
+
+        checkVictory() {
+            for (let row = 0; row < this.size; row++) {
+                for (let col = 0; col < this.size; col++) {
+                    if (this.grid[row][col] === 0) return false;
+                    if (hasConflict(this.grid, row, col, this.grid[row][col], this.size)) return false;
+                }
+            }
+            return true;
+        }
+
+        aiHint() {
+            if (this.completed) {
+                this.setHintText("这一题已经完成啦。");
+                return;
+            }
+            if (!this.roundStarted) {
+                this.setHintText("先点上方“准备好了”，再来拿线索卡。");
+                return;
+            }
+            this.aiHints++;
+            this.updateUI();
+            if (this.selectedRow !== -1 && this.selectedCol !== -1 && !this.fixedMask[this.selectedRow][this.selectedCol]) {
+                const candidates = getCandidates(this.grid, this.selectedRow, this.selectedCol, this.size);
+                if (candidates.length === 1) {
+                    this.setHintText(`这一格只剩 ${candidates[0]} 可以选。因为同行、同列、同宫格已经帮我们排掉其他数字了。`);
+                } else if (candidates.length > 1) {
+                    this.setHintText(`这一格可能是：${candidates.join("、")}。再看看同行、同列、同宫格，找最合适的那个。`);
+                } else {
+                    this.setHintText("这一格暂时选不出来，前面可能有冲突，先看看红色提醒。");
+                }
+                return;
+            }
+            for (let row = 0; row < this.size; row++) {
+                for (let col = 0; col < this.size; col++) {
+                    if (!this.fixedMask[row][col] && this.grid[row][col] === 0) {
+                        const candidates = getCandidates(this.grid, row, col, this.size);
+                        if (candidates.length === 1) {
+                            this.selectedRow = row;
+                            this.selectedCol = col;
+                            this.renderGrid();
+                            this.setHintText(`可以先看第 ${row + 1} 行第 ${col + 1} 列，它现在只剩 ${candidates[0]} 一个可能。`);
+                            return;
+                        }
+                    }
+                }
+            }
+            this.setHintText("现在还没有一眼就能确定的格子。选一个空格，先想想它可能填什么。");
+        }
+
+        renderKeypad() {
+            const keypad = this.elements.keypadContainer;
+            keypad.innerHTML = "";
+            for (let i = 1; i <= this.size; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.className = "key-btn number-btn";
+                bindPress(btn, () => this.setNumber(i));
+                keypad.appendChild(btn);
+            }
+
+            const actionRow = document.createElement("div");
+            actionRow.className = "keypad-actions";
+
+            const undoBtn = document.createElement("button");
+            undoBtn.textContent = "退后一步";
+            undoBtn.className = "key-btn action-btn undo-btn";
+            bindPress(undoBtn, () => this.undo());
+            actionRow.appendChild(undoBtn);
+            this.elements.undoBtn = undoBtn;
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "擦除";
+            delBtn.className = "key-btn action-btn erase-btn";
+            bindPress(delBtn, () => this.setNumber("del"));
+            actionRow.appendChild(delBtn);
+
+            const hintBtn = document.createElement("button");
+            hintBtn.textContent = "给个线索";
+            hintBtn.className = "key-btn action-btn hint-btn";
+            bindPress(hintBtn, () => this.aiHint());
+            actionRow.appendChild(hintBtn);
+            keypad.appendChild(actionRow);
+        }
+
+        renderHistory() {
+            const list = this.elements.historyList;
+            const entries = this.history.slice().reverse();
+            if (!entries.length) {
+                list.innerHTML = `<div class="history-empty">还没有操作</div>`;
+                return;
+            }
+            list.innerHTML = entries.map((item, index) => (
+                `<div class="history-item">${this.history.length - index}. ${item.actionText}</div>`
+            )).join("");
+        }
+
+        startTimer() {
+            if (!this.useTimer) return;
+            if (this.interval) clearInterval(this.interval);
+            this.interval = setInterval(() => {
+                if (this.completed) return;
+                this.timerSeconds++;
+                if (this.elements.timerSpan) this.elements.timerSpan.textContent = formatTime(this.timerSeconds);
+            }, 1000);
+        }
+
+        stopTimer() {
+            if (this.interval) {
+                clearInterval(this.interval);
+                this.interval = null;
+            }
+        }
+
+        updateUI() {
+            if (this.elements.mistakesSpan) this.elements.mistakesSpan.textContent = `小提醒 ${this.mistakes}`;
+            if (this.elements.aiHintsSpan) this.elements.aiHintsSpan.textContent = `线索卡 ${this.aiHints}`;
+            if (this.elements.statusSpan) {
+                this.elements.statusSpan.textContent = this.completed ? "完成啦" : (this.roundStarted ? "进行中" : "还没开始");
+            }
+            if (this.elements.undoBtn) this.elements.undoBtn.disabled = this.history.length === 0 || this.completed || !this.roundStarted;
+        }
+
+        startRound() {
+            if (this.roundStarted || this.completed) return;
+            this.roundStarted = true;
+            this.setHintText("开始啦！先选一个空格，再点数字。");
+            if (this.useTimer) this.startTimer();
+            this.updateUI();
+        }
+
+        setHintText(msg) {
+            if (this.elements.hintDiv) this.elements.hintDiv.textContent = msg;
+        }
+
+        getResultSummary() {
+            const timeText = this.useTimer ? `用时 ${formatTime(this.timerSeconds)}，` : "";
+            return `${timeText}小提醒 ${this.mistakes} 次，线索卡 ${this.aiHints} 次。`;
+        }
+
+        destroy() {
+            this.stopTimer();
+            if (this.containerDiv) this.containerDiv.remove();
+            if (this.sidePanelDiv) this.sidePanelDiv.remove();
+        }
+    }
+
+    let activeGame = false;
+    let currentPlayers = [];
+    let currentGameMode = "duel";
+    let winnerModal = null;
+    let lastGameOptions = null;
+    let roundStarted = false;
+    let roundStarting = false;
+    let roundWinner = null;
+    let musicEnabled = true;
+
+    function getBackgroundMusic() {
+        return document.getElementById("backgroundMusic");
+    }
+
+    function setBackgroundMusicVolume(value) {
+        const audio = getBackgroundMusic();
+        const volume = Math.max(0, Math.min(100, Number(value) || 0));
+        if (audio) audio.volume = volume / 100;
+        if (volume === 0) musicEnabled = false;
+        updateMusicUI();
+    }
+
+    function canPlayBackgroundMusic() {
+        return activeGame && (roundStarting || roundStarted);
+    }
+
+    function updateMusicUI() {
+        const audio = getBackgroundMusic();
+        const toggleBtn = document.getElementById("musicToggleBtn");
+        const volumeInput = document.getElementById("musicVolume");
+        if (volumeInput && audio) volumeInput.value = String(Math.round(audio.volume * 100));
+        if (toggleBtn) {
+            const isOn = Boolean(audio && musicEnabled && audio.volume > 0 && !audio.paused);
+            toggleBtn.textContent = isOn ? "音乐开" : "音乐停";
+            toggleBtn.classList.toggle("is-muted", !isOn);
+            toggleBtn.setAttribute("aria-pressed", isOn ? "true" : "false");
+        }
+    }
+
+    function playBackgroundMusic() {
+        const audio = getBackgroundMusic();
+        if (!audio || !musicEnabled || audio.volume === 0 || !canPlayBackgroundMusic()) {
+            updateMusicUI();
+            return;
+        }
+        audio.play()
+            .then(updateMusicUI)
+            .catch(updateMusicUI);
+    }
+
+    function stopBackgroundMusic() {
+        const audio = getBackgroundMusic();
+        if (!audio) return;
+        audio.pause();
+        audio.currentTime = 0;
+        updateMusicUI();
+    }
+
+    function toggleBackgroundMusic() {
+        const audio = getBackgroundMusic();
+        if (!audio) return;
+        if (!audio.paused && musicEnabled) {
+            musicEnabled = false;
+            audio.pause();
+            updateMusicUI();
+            return;
+        }
+        musicEnabled = true;
+        if (audio.volume === 0) setBackgroundMusicVolume(35);
+        playBackgroundMusic();
+    }
+
+    function initMusicControls() {
+        const audio = getBackgroundMusic();
+        const toggleBtn = document.getElementById("musicToggleBtn");
+        const volumeInput = document.getElementById("musicVolume");
+        if (!audio || !toggleBtn || !volumeInput) return;
+        audio.volume = Number(volumeInput.value) / 100;
+        bindPress(toggleBtn, toggleBackgroundMusic);
+        volumeInput.addEventListener("input", () => {
+            musicEnabled = Number(volumeInput.value) > 0;
+            setBackgroundMusicVolume(volumeInput.value);
+            if (musicEnabled && canPlayBackgroundMusic()) playBackgroundMusic();
+            else audio.pause();
+        });
+        audio.addEventListener("play", updateMusicUI);
+        audio.addEventListener("pause", updateMusicUI);
+        updateMusicUI();
+    }
+
+    function removeWinnerModal() {
+        if (winnerModal) {
+            winnerModal.remove();
+            winnerModal = null;
+        }
+    }
+
+    function showModal(title, message, primaryText, primaryAction, secondaryText = "回到首页", secondaryAction = backToHome) {
+        removeWinnerModal();
+        const modalDiv = document.createElement("div");
+        modalDiv.className = "modal";
+        modalDiv.innerHTML = `
+            <div class="modal-card">
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <div class="modal-actions">
+                    <button class="primary" id="modalPrimaryBtn">${primaryText}</button>
+                    <button class="secondary" id="modalSecondaryBtn">${secondaryText}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        bindPress(document.getElementById("modalPrimaryBtn"), () => {
+            removeWinnerModal();
+            primaryAction();
+        });
+        bindPress(document.getElementById("modalSecondaryBtn"), () => {
+            removeWinnerModal();
+            secondaryAction();
+        });
+        winnerModal = modalDiv;
+    }
+
+    function showWinnerModal(winnerName, summary) {
+        const message = `<span class="winner-label">完成的小老师</span><span class="winner-name">${winnerName}</span><span class="result-lines">${summary}<br>这次最棒的地方是：一直按“行、列、宫”慢慢检查。</span>`;
+        showModal("你完成啦", message, "再试一题", () => startGame(lastGameOptions));
+        playVictorySound();
+    }
+
+    function showAllCompleteModal() {
+        const resultLines = currentPlayers
+            .map(player => `${player.name}：${player.getResultSummary()}`)
+            .join("<br>");
+        const winnerText = roundWinner ? `<span class="winner-label">先完成的小朋友</span><span class="winner-name">${roundWinner.name}</span>` : "";
+        showModal("这一轮完成啦", `${winnerText}<span class="result-lines">${resultLines}<br>两位同学都完成啦，可以一起回头看看刚才是怎么想出来的。</span>`, "再试一题", () => startGame(lastGameOptions));
+        playVictorySound();
+    }
+
+    function backToHome() {
+        currentPlayers.forEach(player => player.destroy());
+        currentPlayers = [];
+        activeGame = false;
+        roundStarted = false;
+        roundStarting = false;
+        roundWinner = null;
+        removeWinnerModal();
+        stopBackgroundMusic();
+        document.getElementById("setupScreen").classList.remove("hidden");
+        document.getElementById("battleScreen").classList.add("hidden");
+    }
+
+    function endMatch() {
+        if (!activeGame) {
+            backToHome();
+            return;
+        }
+        activeGame = false;
+        stopBackgroundMusic();
+        currentPlayers.forEach(player => player.stopTimer());
+        showModal("这一轮先停一下", "可以回到首页换设置，也可以马上换一道题继续练习。", "再试一题", () => startGame(lastGameOptions));
+    }
+
+    function getSelectedOptions() {
+        return {
+            mode: document.getElementById("modeSelect").value,
+            size: Number(document.getElementById("boardSizeSelect").value),
+            difficulty: document.getElementById("difficultySelect").value,
+            useTimer: document.getElementById("timeModeSelect").value === "timed"
+        };
+    }
+
+    function startGame(options = getSelectedOptions()) {
+        const size = options.size;
+        if (![4, 6, 9].includes(size)) return;
+        currentPlayers.forEach(player => player.destroy());
+        currentPlayers = [];
+        removeWinnerModal();
+        stopBackgroundMusic();
+        currentGameMode = options.mode;
+        lastGameOptions = { ...options };
+        roundStarted = false;
+        roundStarting = false;
+        roundWinner = null;
+
+        const puzzleData = getRandomPuzzle(size, options.difficulty);
+        const layout = document.getElementById("battleLayout");
+        layout.innerHTML = "";
+        layout.classList.toggle("solo-layout", options.mode === "solo");
+        document.getElementById("gameMeta").textContent = SIZE_LABELS[size] || `${size}×${size}`;
+        document.getElementById("teacherTip").textContent = "题目已经准备好啦。点“准备好了”以后，我们就开始一起填。";
+        const startOverlay = document.getElementById("roundStartOverlay");
+        const startTimerBtn = document.getElementById("startTimerBtn");
+        startOverlay.classList.remove("hidden");
+        startTimerBtn.disabled = false;
+        startTimerBtn.textContent = "开始";
+        startTimerBtn.className = "big-start-btn";
+
+        const winHandler = (winnerPid, summary) => {
+            if (!activeGame) return;
+            const finishedPlayer = currentPlayers.find(player => player.pid === winnerPid);
+            if (currentGameMode === "solo") {
+                activeGame = false;
+                stopBackgroundMusic();
+                const winnerName = finishedPlayer ? finishedPlayer.name : "单人演示";
+                showWinnerModal(winnerName, summary);
+                return;
+            }
+            if (!roundWinner && finishedPlayer) {
+                roundWinner = {
+                    pid: finishedPlayer.pid,
+                    name: finishedPlayer.name,
+                    summary
+                };
+            }
+            document.getElementById("teacherTip").textContent = `${finishedPlayer ? finishedPlayer.name : `第${winnerPid}位同学`} 已经完成啦，另一位同学可以继续慢慢填。`;
+            if (currentPlayers.every(player => player.completed)) {
+                activeGame = false;
+                stopBackgroundMusic();
+                showAllCompleteModal();
+            }
+        };
+
+        if (options.mode === "solo") {
+            currentPlayers.push(new SudokuPlayer(1, "单人演示", "", size, puzzleData, options.useTimer, winHandler));
+        } else {
+            currentPlayers.push(new SudokuPlayer(1, "玩家1", "", size, puzzleData, options.useTimer, winHandler));
+            currentPlayers.push(new SudokuPlayer(2, "玩家2", "", size, puzzleData, options.useTimer, winHandler));
+        }
+
+        activeGame = true;
+        document.getElementById("setupScreen").classList.add("hidden");
+        document.getElementById("battleScreen").classList.remove("hidden");
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function startRound() {
+        if (!activeGame || roundStarted || roundStarting) return;
+        roundStarting = true;
+        const startOverlay = document.getElementById("roundStartOverlay");
+        const startTimerBtn = document.getElementById("startTimerBtn");
+        startTimerBtn.disabled = true;
+        playBackgroundMusic();
+
+        startOverlay.innerHTML = `<div class="ready-go-pop">准备</div>`;
+        playStartCueSound("prep");
+        await sleep(650);
+        startOverlay.innerHTML = `<div class="ready-go-pop">开始</div>`;
+        playStartCueSound("start");
+        await sleep(650);
+
+        roundStarted = true;
+        roundStarting = false;
+        currentPlayers.forEach(player => player.startRound());
+        startOverlay.classList.add("hidden");
+        startOverlay.innerHTML = `<button class="big-start-btn" id="startTimerBtn">准备好了</button>`;
+        bindPress(document.getElementById("startTimerBtn"), startRound);
+        document.getElementById("teacherTip").textContent = "开始啦。选中空格后，相关的行、列和小宫格会一起亮起来。";
+    }
+
+    initSetupControls();
+    initMusicControls();
+    bindPress(document.getElementById("startBattleBtn"), () => startGame());
+    bindPress(document.getElementById("startTimerBtn"), startRound);
+    bindPress(document.getElementById("newPuzzleBtn"), () => startGame(lastGameOptions || getSelectedOptions()));
+    bindPress(document.getElementById("backHomeBtn"), backToHome);
+    bindPress(document.getElementById("endMatchBtn"), endMatch);
+</script>
+</body>
+</html>

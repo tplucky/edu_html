@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+.codegraph/
+.workbuddy/
+.wbapp_*
+**/.playwright-mcp/
+**/.图片制作缓存/
+.env
+.env.*
+*.pem
+*.key
+__pycache__/
+*.py[cod]
